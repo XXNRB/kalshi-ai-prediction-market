@@ -1,0 +1,32 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.egg-info/
+backend/.pytest_cache/
+*.pyc
+
+# Env
+.env
+.env.local
+*.env
+!.env.example
+
+# SQLite
+*.db
+*.sqlite3
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/next-env.d.ts
+frontend/tsconfig.tsbuildinfo
+
+# OS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
