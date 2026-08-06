@@ -12,7 +12,7 @@ from app.schemas.market import MarketOut, MarketSort, PricePoint
 from app.schemas.ranking import OpportunityScore
 from app.services.live_history import fetch_live_history
 from app.services.ranking import compute_opportunity
-from app.services.signals import Signal, compute_signal
+from app.services.signals import Signal, compute_signal, get_recent_history
 
 router = APIRouter(prefix="/api/markets", tags=["markets"])
 
@@ -28,19 +28,6 @@ def _price_change_24h(db: Session, market: Market) -> float:
     if not oldest:
         return 0.0
     return round(market.yes_price - oldest.yes_price, 4)
-
-
-def _recent_history(db: Session, market: Market, limit: int = 50) -> list[PriceHistory]:
-    # most recent `limit` rows, re-sorted ascending
-    recent = (
-        db.query(PriceHistory)
-        .filter(PriceHistory.market_id == market.id)
-        .order_by(PriceHistory.timestamp.desc())
-        .limit(limit)
-        .all()
-    )
-    recent.reverse()
-    return recent
 
 
 def _signal(market: Market, recent_history: list[PriceHistory]) -> Signal:
@@ -63,7 +50,7 @@ def list_markets(
     markets = db.query(Market).all()
     results = []
     for m in markets:
-        recent_history = _recent_history(db, m)
+        recent_history = get_recent_history(db, m)
         results.append(
             MarketOut.model_validate(m, from_attributes=True).model_copy(
                 update={
@@ -94,7 +81,7 @@ def get_market(ticker: str, db: Session = Depends(get_db)) -> MarketOut:
     if market is None:
         raise HTTPException(status_code=404, detail=f"Market '{ticker}' not found")
     out = MarketOut.model_validate(market, from_attributes=True)
-    recent_history = _recent_history(db, market)
+    recent_history = get_recent_history(db, market)
     return out.model_copy(
         update={
             "price_change_24h": _price_change_24h(db, market),

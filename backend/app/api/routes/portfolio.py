@@ -22,7 +22,7 @@ def buy_position(body: BuyRequest, db: Session = Depends(get_db)) -> TradeOut:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PortfolioError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return portfolio_service.to_trade_out(trade)
+    return portfolio_service.to_trade_out(trade, db)
 
 
 @router.post("/trades/{trade_id}/sell", response_model=TradeOut)
@@ -33,4 +33,4 @@ def sell_position(trade_id: int, db: Session = Depends(get_db)) -> TradeOut:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PortfolioError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return portfolio_service.to_trade_out(trade)
+    return portfolio_service.to_trade_out(trade, db)

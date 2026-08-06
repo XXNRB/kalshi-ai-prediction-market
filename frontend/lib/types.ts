@@ -64,6 +64,16 @@ export interface MarketAnalysis {
 
 export type BuyPosition = "YES" | "NO";
 
+export interface PositionStats {
+  roi_pct: number;
+  probability_change_pts: number;
+  expected_value_pct: number | null;
+  momentum_pts_per_step: number;
+  risk_score: number;
+  action: "hold" | "consider_profit";
+  reason: string;
+}
+
 export interface Trade {
   id: number;
   ticker: string;
@@ -78,6 +88,7 @@ export interface Trade {
   profit_loss: number | null;
   timestamp: string;
   exit_timestamp: string | null;
+  position_stats: PositionStats | null;
 }
 
 export interface PortfolioSummary {
@@ -119,4 +130,19 @@ export interface BacktestResult {
   candle_count: number;
   signal_strategy: StrategyResult;
   buy_hold_strategy: StrategyResult;
+}
+
+export interface AllocationItem {
+  ticker: string;
+  market_title: string;
+  analysis: MarketAnalysis;
+  raw_allocation_pct: number;
+  final_allocation_pct: number;
+  skipped: boolean;
+  skip_reason: string | null;
+}
+
+export interface AllocationResponse {
+  items: AllocationItem[];
+  errors: string[];
 }

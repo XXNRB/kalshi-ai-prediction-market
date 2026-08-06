@@ -65,7 +65,7 @@ def _information_score(cached: Optional[MarketAnalysisRecord]) -> Tuple[float, s
     return score, f"Backed by {source_note}, confidence {cached.confidence}/10."
 
 
-def _risk_score(
+def risk_score(
     market: Market, recent_history: List[PriceHistory], cached: Optional[MarketAnalysisRecord]
 ) -> Tuple[float, str]:
     if cached is not None:
@@ -103,7 +103,7 @@ def compute_opportunity(
     time_advantage, time_note = _time_advantage_score(market)
     edge, edge_note = _edge_score(cached)
     information, info_note = _information_score(cached)
-    risk, risk_note = _risk_score(market, recent_history, cached)
+    risk, risk_note = risk_score(market, recent_history, cached)
 
     total = max(0.0, min(100.0, liquidity + time_advantage + edge + information - risk))
     stars, tier_label = _stars_for_score(total)

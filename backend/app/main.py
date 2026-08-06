@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import analysis, backtest, markets, portfolio
+from app.api.routes import allocation, analysis, backtest, markets, portfolio
 from app.config import settings
 from app.core.scheduler import run_ingestion_loop
 from app.database import init_db
@@ -36,6 +36,7 @@ app.add_middleware(
 app.include_router(markets.router)
 app.include_router(analysis.router)
 app.include_router(portfolio.router)
+app.include_router(allocation.router)
 app.include_router(backtest.router)
 
 

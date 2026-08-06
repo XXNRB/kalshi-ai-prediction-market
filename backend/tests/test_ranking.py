@@ -7,7 +7,7 @@ from app.services.ranking import (
     _edge_score,
     _information_score,
     _liquidity_score,
-    _risk_score,
+    risk_score,
     _stars_for_score,
     _time_advantage_score,
     compute_opportunity,
@@ -97,8 +97,8 @@ def test_information_score_rewards_real_sources_and_confidence():
 
 
 def test_risk_score_uses_cached_confidence_and_risk_count():
-    high_confidence_few_risks = _risk_score(make_market(), [], make_analysis(confidence=10, risks=["one"]))[0]
-    low_confidence_many_risks = _risk_score(
+    high_confidence_few_risks = risk_score(make_market(), [], make_analysis(confidence=10, risks=["one"]))[0]
+    low_confidence_many_risks = risk_score(
         make_market(), [], make_analysis(confidence=2, risks=["a", "b", "c", "d", "e", "f"])
     )[0]
     assert high_confidence_few_risks == 2.0  # (10-10)/10*15=0 + min(10, 1*2)=2
@@ -108,11 +108,11 @@ def test_risk_score_uses_cached_confidence_and_risk_count():
 
 def test_risk_score_falls_back_to_price_volatility_without_analysis():
     market = make_market()
-    assert _risk_score(market, [], None)[0] == 0.0  # no history at all
-    assert _risk_score(market, make_history([0.5]), None)[0] == 0.0  # single point
+    assert risk_score(market, [], None)[0] == 0.0  # no history at all
+    assert risk_score(market, make_history([0.5]), None)[0] == 0.0  # single point
 
-    stable = _risk_score(market, make_history([0.50, 0.50, 0.51, 0.50]), None)[0]
-    volatile = _risk_score(market, make_history([0.20, 0.60, 0.30, 0.70]), None)[0]
+    stable = risk_score(market, make_history([0.50, 0.50, 0.51, 0.50]), None)[0]
+    volatile = risk_score(market, make_history([0.20, 0.60, 0.30, 0.70]), None)[0]
     assert stable < volatile
 
 

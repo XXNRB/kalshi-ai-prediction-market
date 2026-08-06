@@ -1,4 +1,5 @@
 import type {
+  AllocationResponse,
   BacktestResult,
   BuyPosition,
   Market,
@@ -67,6 +68,13 @@ export function buyPosition(ticker: string, position: BuyPosition, amount: numbe
 
 export function sellPosition(tradeId: number): Promise<Trade> {
   return apiFetch<Trade>(`/api/portfolio/trades/${tradeId}/sell`, { method: "POST" });
+}
+
+export function runAllocation(tickers: string[]): Promise<AllocationResponse> {
+  return apiFetch<AllocationResponse>("/api/portfolio/allocate", {
+    method: "POST",
+    body: JSON.stringify({ tickers }),
+  });
 }
 
 export function runBacktest(

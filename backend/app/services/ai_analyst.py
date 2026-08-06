@@ -1,13 +1,17 @@
 import json
 import logging
+from typing import Optional
 
 from openai import AsyncOpenAI
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from app.config import settings
 from app.models.market import Market
 from app.models.price_history import PriceHistory
 from app.schemas.analysis import MarketAnalysis
+
+MIN_EDGE_TO_BET = 0.05
+MIN_CONFIDENCE_TO_BET = 5
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +151,58 @@ def kelly_allocation_pct(
     confidence_scalar = max(min(confidence, 10), 0) / 10
     allocation = full_kelly * kelly_fraction * confidence_scalar * 100
     return round(min(allocation, max_allocation_pct), 1)
+
+
+class AllocationResult(BaseModel):
+    raw_allocation_pct: float
+    final_allocation_pct: float
+    skipped: bool
+    skip_reason: Optional[str] = None
+
+
+def allocate_batch(
+    analyses: dict[str, MarketAnalysis], max_allocation_pct: float = 15.0
+) -> dict[str, AllocationResult]:
+    """Cross-market position sizing on top of the existing per-market
+    kelly_allocation_pct: markets below a conviction threshold (weak edge
+    or low confidence) are skipped entirely rather than just shrunk, and
+    the capital that would have gone to them is redistributed
+    proportionally to the remaining markets' own raw Kelly share, still
+    capped at max_allocation_pct per market."""
+    raw = {
+        ticker: kelly_allocation_pct(
+            a.ai_estimated_probability, a.market_implied_probability, a.confidence, max_allocation_pct=max_allocation_pct
+        )
+        for ticker, a in analyses.items()
+    }
+
+    skip_reasons: dict[str, str] = {}
+    for ticker, a in analyses.items():
+        if abs(a.edge) < MIN_EDGE_TO_BET:
+            skip_reasons[ticker] = (
+                f"Edge of {a.edge:+.0%} is below the {MIN_EDGE_TO_BET:.0%} conviction threshold — too close to a toss-up."
+            )
+        elif a.confidence < MIN_CONFIDENCE_TO_BET:
+            skip_reasons[ticker] = (
+                f"Confidence {a.confidence}/10 is below the {MIN_CONFIDENCE_TO_BET}/10 threshold."
+            )
+
+    freed = sum(raw[t] for t in skip_reasons)
+    kept = [t for t in analyses if t not in skip_reasons]
+    kept_raw_total = sum(raw[t] for t in kept)
+
+    results: dict[str, AllocationResult] = {}
+    for ticker, reason in skip_reasons.items():
+        results[ticker] = AllocationResult(
+            raw_allocation_pct=raw[ticker], final_allocation_pct=0.0, skipped=True, skip_reason=reason
+        )
+    for ticker in kept:
+        boost = freed * (raw[ticker] / kept_raw_total) if kept_raw_total > 0 else 0.0
+        final = round(min(raw[ticker] + boost, max_allocation_pct), 1)
+        results[ticker] = AllocationResult(
+            raw_allocation_pct=raw[ticker], final_allocation_pct=final, skipped=False
+        )
+    return results
 
 
 async def analyze_market(market: Market, history: list[PriceHistory]) -> MarketAnalysis:

@@ -12,6 +12,23 @@ class BuyRequest(BaseModel):
     amount: float = Field(gt=0)
 
 
+class PositionStats(BaseModel):
+    """Math-only stats for an open position — no trend detection, no AI
+    call. `expected_value_pct` reuses whatever AI analysis is already
+    cached for the market (if any); everything else is arithmetic on
+    price data that's already being collected. `action` is a flat
+    ROI-threshold flag, not a judgment about where the price is headed —
+    the person decides, this just surfaces the number."""
+
+    roi_pct: float
+    probability_change_pts: float
+    expected_value_pct: Optional[float]
+    momentum_pts_per_step: float
+    risk_score: float
+    action: Literal["hold", "consider_profit"]
+    reason: str
+
+
 class TradeOut(BaseModel):
     id: int
     ticker: str
@@ -26,6 +43,7 @@ class TradeOut(BaseModel):
     profit_loss: Optional[float]  # realized (closed) or unrealized (open)
     timestamp: datetime
     exit_timestamp: Optional[datetime]
+    position_stats: Optional[PositionStats] = None
 
 
 class PortfolioSummary(BaseModel):

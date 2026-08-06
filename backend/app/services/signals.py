@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from app.models.market import Market
 from app.models.price_history import PriceHistory
@@ -21,6 +22,21 @@ class Signal(BaseModel):
 
 
 NO_SIGNAL = Signal(type="none")
+
+
+def get_recent_history(db: Session, market: Market, limit: int = 50) -> List[PriceHistory]:
+    """Most recent `limit` local price points for a market, re-sorted
+    ascending. Shared by market-level and position-level signal
+    computations so both read from the identical query."""
+    recent = (
+        db.query(PriceHistory)
+        .filter(PriceHistory.market_id == market.id)
+        .order_by(PriceHistory.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    recent.reverse()
+    return recent
 
 
 def compute_signal(

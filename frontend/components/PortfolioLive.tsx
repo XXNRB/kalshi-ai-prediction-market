@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { getPortfolio, sellPosition } from "@/lib/api";
+import AllocationPlanner from "@/components/AllocationPlanner";
+import PositionStatsRow from "@/components/PositionStatsRow";
 import type { PortfolioSummary, Trade } from "@/lib/types";
 
 const REFRESH_MS = 15000;
@@ -77,6 +79,8 @@ export default function PortfolioLive({ initialSummary }: { initialSummary: Port
         </div>
       )}
 
+      <AllocationPlanner cashBalance={summary.cash_balance} onTraded={refresh} />
+
       <div>
         <h2 className="mb-3 text-lg font-semibold">Open Positions</h2>
         {summary.open_positions.length === 0 ? (
@@ -99,33 +103,42 @@ export default function PortfolioLive({ initialSummary }: { initialSummary: Port
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {summary.open_positions.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-900/60">
-                    <td className="px-4 py-3">
-                      <Link href={`/markets/${t.ticker}`} className="font-medium hover:text-emerald-400">
-                        {t.market_title}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-slate-400">{t.position}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{(t.entry_price * 100).toFixed(0)}¢</td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {t.current_price !== null ? `${(t.current_price * 100).toFixed(0)}¢` : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums">{fmtMoney(t.amount)}</td>
-                    <td className={`px-4 py-3 text-right tabular-nums ${plColor(t.profit_loss ?? 0)}`}>
-                      {t.profit_loss !== null
-                        ? `${t.profit_loss >= 0 ? "+" : ""}${fmtMoney(t.profit_loss)}`
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleSell(t)}
-                        disabled={sellingId === t.id}
-                        className="rounded-md border border-slate-700 px-3 py-1 text-xs hover:border-slate-500 disabled:opacity-50"
-                      >
-                        {sellingId === t.id ? "Selling…" : "Sell"}
-                      </button>
-                    </td>
-                  </tr>
+                  <Fragment key={t.id}>
+                    <tr className="hover:bg-slate-900/60">
+                      <td className="px-4 py-3">
+                        <Link href={`/markets/${t.ticker}`} className="font-medium hover:text-emerald-400">
+                          {t.market_title}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">{t.position}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">{(t.entry_price * 100).toFixed(0)}¢</td>
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {t.current_price !== null ? `${(t.current_price * 100).toFixed(0)}¢` : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums">{fmtMoney(t.amount)}</td>
+                      <td className={`px-4 py-3 text-right tabular-nums ${plColor(t.profit_loss ?? 0)}`}>
+                        {t.profit_loss !== null
+                          ? `${t.profit_loss >= 0 ? "+" : ""}${fmtMoney(t.profit_loss)}`
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => handleSell(t)}
+                          disabled={sellingId === t.id}
+                          className="rounded-md border border-slate-700 px-3 py-1 text-xs hover:border-slate-500 disabled:opacity-50"
+                        >
+                          {sellingId === t.id ? "Selling…" : "Sell"}
+                        </button>
+                      </td>
+                    </tr>
+                    {t.position_stats && (
+                      <tr className="bg-slate-950/40">
+                        <td colSpan={7} className="px-4 pb-3">
+                          <PositionStatsRow stats={t.position_stats} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

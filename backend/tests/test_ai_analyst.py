@@ -7,7 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.models.market import Market
-from app.services.ai_analyst import AIAnalystError, analyze_market, kelly_allocation_pct
+from app.schemas.analysis import MarketAnalysis
+from app.services.ai_analyst import AIAnalystError, allocate_batch, analyze_market, kelly_allocation_pct
 
 VALID_RESPONSE = {
     "market_ticker": "BTC-70K",
@@ -154,3 +155,93 @@ def test_kelly_allocation_handles_no_side_edge():
     # market overprices YES (0.80) but AI thinks it's much less likely (0.30) -> bet NO
     allocation = kelly_allocation_pct(ai_probability=0.30, market_yes_price=0.80, confidence=9)
     assert allocation > 0
+
+
+def make_analysis(**overrides) -> MarketAnalysis:
+    defaults = dict(
+        market_ticker="TICKER",
+        market_implied_probability=0.42,
+        ai_estimated_probability=0.58,
+        edge=0.16,
+        reasoning=["reason"],
+        risks=["risk"],
+        confidence=8,
+        recommendation="Consider YES",
+        suggested_allocation_pct=0.0,
+        data_sources=["source"],
+    )
+    defaults.update(overrides)
+    return MarketAnalysis(**defaults)
+
+
+def test_allocate_batch_skips_weak_edge_and_boosts_the_strong_pick():
+    analyses = {
+        "STRONG": make_analysis(
+            market_implied_probability=0.40, ai_estimated_probability=0.60, edge=0.20, confidence=8
+        ),
+        "WEAK": make_analysis(
+            market_implied_probability=0.50, ai_estimated_probability=0.52, edge=0.02, confidence=6
+        ),
+    }
+
+    results = allocate_batch(analyses)
+
+    assert results["WEAK"].skipped is True
+    assert results["WEAK"].final_allocation_pct == 0.0
+    assert "conviction threshold" in results["WEAK"].skip_reason
+
+    assert results["STRONG"].skipped is False
+    assert results["STRONG"].final_allocation_pct > results["STRONG"].raw_allocation_pct
+
+
+def test_allocate_batch_skips_low_confidence_even_with_decent_edge():
+    analyses = {
+        "UNSURE": make_analysis(
+            market_implied_probability=0.40, ai_estimated_probability=0.55, edge=0.15, confidence=3
+        ),
+    }
+
+    results = allocate_batch(analyses)
+
+    assert results["UNSURE"].skipped is True
+    assert "Confidence" in results["UNSURE"].skip_reason
+
+
+def test_allocate_batch_never_exceeds_cap_even_after_redistribution():
+    analyses = {
+        "MAXED": make_analysis(
+            market_implied_probability=0.05, ai_estimated_probability=0.99, edge=0.94, confidence=10
+        ),
+        "SKIPPED": make_analysis(
+            market_implied_probability=0.50, ai_estimated_probability=0.52, edge=0.02, confidence=9
+        ),
+    }
+
+    results = allocate_batch(analyses, max_allocation_pct=15.0)
+
+    assert results["MAXED"].raw_allocation_pct == 15.0
+    assert results["MAXED"].final_allocation_pct == 15.0  # freed capital has nowhere left to go
+
+
+def test_allocate_batch_redistributes_freed_capital_proportionally():
+    analyses = {
+        "A": make_analysis(
+            market_implied_probability=0.42, ai_estimated_probability=0.55, edge=0.13, confidence=6
+        ),
+        "B": make_analysis(
+            market_implied_probability=0.42, ai_estimated_probability=0.50, edge=0.08, confidence=6
+        ),
+        "C": make_analysis(
+            market_implied_probability=0.42, ai_estimated_probability=0.44, edge=0.02, confidence=6
+        ),
+    }
+
+    results = allocate_batch(analyses)
+
+    assert results["C"].skipped is True
+    boost_a = results["A"].final_allocation_pct - results["A"].raw_allocation_pct
+    boost_b = results["B"].final_allocation_pct - results["B"].raw_allocation_pct
+    assert boost_a > 0
+    assert boost_b > 0
+    # freed capital from C should roughly land on A and B combined (allowing for per-step rounding)
+    assert boost_a + boost_b == pytest.approx(results["C"].raw_allocation_pct, abs=0.2)
