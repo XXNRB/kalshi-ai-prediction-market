@@ -23,7 +23,9 @@ class Signal(BaseModel):
 NO_SIGNAL = Signal(type="none")
 
 
-def compute_signal(market: Market, history: List[PriceHistory]) -> Signal:
+def compute_signal(
+    market: Market, history: List[PriceHistory], as_of: Optional[datetime] = None
+) -> Signal:
     """Deterministic, explainable entry/exit heuristic based on where the
     current price sits within its own recent range — not another AI call.
 
@@ -31,12 +33,16 @@ def compute_signal(market: Market, history: List[PriceHistory]) -> Signal:
     position, so the exit case is phrased conditionally rather than as
     personalized profit-taking advice. That needs the paper trading engine
     (tracking real entry prices), which doesn't exist yet.
+
+    `as_of` lets the backtesting engine replay this signal against a past
+    moment instead of real "now" — defaults to the live behavior.
     """
     if len(history) < 2 or market.volume <= 0:
         return NO_SIGNAL
 
+    now = as_of or datetime.utcnow()
     if market.expiration_date is not None:
-        time_left = market.expiration_date - datetime.utcnow()
+        time_left = market.expiration_date - now
         if time_left < MIN_TIME_LEFT:
             return NO_SIGNAL
 

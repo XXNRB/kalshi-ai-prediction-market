@@ -90,3 +90,33 @@ export interface PortfolioSummary {
   open_positions: Trade[];
   closed_trades: Trade[];
 }
+
+export interface BacktestTrade {
+  entry_time: string;
+  entry_price: number;
+  exit_time: string;
+  exit_price: number;
+  profit_loss: number;
+  exit_reason: "exit_signal" | "end_of_window";
+}
+
+export interface StrategyResult {
+  strategy: string;
+  starting_balance: number;
+  ending_balance: number;
+  total_return_pct: number;
+  win_rate_pct: number | null;
+  max_drawdown_pct: number;
+  sharpe_ratio: number;
+  trade_count: number;
+  trades: BacktestTrade[];
+}
+
+export interface BacktestResult {
+  ticker: string;
+  period_start: string;
+  period_end: string;
+  candle_count: number;
+  signal_strategy: StrategyResult;
+  buy_hold_strategy: StrategyResult;
+}

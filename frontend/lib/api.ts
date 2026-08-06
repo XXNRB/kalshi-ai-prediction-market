@@ -1,4 +1,5 @@
 import type {
+  BacktestResult,
   BuyPosition,
   Market,
   MarketAnalysis,
@@ -66,4 +67,14 @@ export function buyPosition(ticker: string, position: BuyPosition, amount: numbe
 
 export function sellPosition(tradeId: number): Promise<Trade> {
   return apiFetch<Trade>(`/api/portfolio/trades/${tradeId}/sell`, { method: "POST" });
+}
+
+export function runBacktest(
+  ticker: string,
+  params?: { starting_balance?: number; bet_size?: number }
+): Promise<BacktestResult> {
+  return apiFetch<BacktestResult>(`/api/markets/${ticker}/backtest`, {
+    method: "POST",
+    body: JSON.stringify(params ?? {}),
+  });
 }

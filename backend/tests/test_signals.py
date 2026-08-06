@@ -91,3 +91,50 @@ def test_no_signal_when_no_expiration_date_set():
     # when we actually know an expiration date
     signal = compute_signal(market, history)
     assert signal.type == "entry"
+
+
+def test_as_of_replays_a_past_moment_instead_of_real_now():
+    # Market "expired" years ago in real time, but as_of lets us replay a
+    # moment when it still had 30 minutes left -- this is what makes
+    # backtesting against historical candles possible without lying about
+    # the current wall-clock time.
+    expiration = datetime(2020, 1, 1, 12, 0, 0)
+    history = make_history([0.30, 0.25, 0.22, 0.20, 0.19])
+    market = Market(
+        id=1,
+        ticker="TEST",
+        title="Test market",
+        yes_price=0.19,
+        no_price=0.81,
+        volume=1000,
+        open_interest=100,
+        liquidity=0.0,
+        expiration_date=expiration,
+    )
+
+    # real "now" (2026) is long past expiration -> gated out
+    assert compute_signal(market, history).type == "none"
+
+    # replaying 30 minutes before that historical expiration -> eligible
+    as_of = expiration - timedelta(minutes=30)
+    signal = compute_signal(market, history, as_of=as_of)
+    assert signal.type == "entry"
+
+
+def test_as_of_still_gates_out_when_too_close_to_historical_expiration():
+    expiration = datetime(2020, 1, 1, 12, 0, 0)
+    history = make_history([0.30, 0.25, 0.22, 0.20, 0.19])
+    market = Market(
+        id=1,
+        ticker="TEST",
+        title="Test market",
+        yes_price=0.19,
+        no_price=0.81,
+        volume=1000,
+        open_interest=100,
+        liquidity=0.0,
+        expiration_date=expiration,
+    )
+
+    as_of = expiration - timedelta(minutes=2)
+    assert compute_signal(market, history, as_of=as_of).type == "none"

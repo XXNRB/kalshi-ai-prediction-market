@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AnalysisPanel from "@/components/AnalysisPanel";
+import BacktestPanel from "@/components/BacktestPanel";
 import OpportunityBreakdown from "@/components/OpportunityBreakdown";
 import PriceChart from "@/components/PriceChart";
 import SignalCallout from "@/components/SignalBadge";
@@ -81,6 +82,8 @@ export default function MarketDetailLive({
         currentYesPrice={market.yes_price}
         initialAnalysis={initialAnalysis}
       />
+
+      <BacktestPanel ticker={ticker} />
     </div>
   );
 }
