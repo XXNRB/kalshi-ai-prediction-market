@@ -45,6 +45,14 @@ export function analyzeMarket(ticker: string): Promise<MarketAnalysis> {
   return apiFetch<MarketAnalysis>(`/api/markets/${ticker}/analyze`, { method: "POST" });
 }
 
+export async function getCachedAnalysis(ticker: string): Promise<MarketAnalysis | null> {
+  try {
+    return await apiFetch<MarketAnalysis>(`/api/markets/${ticker}/analysis`, { cache: "no-store" });
+  } catch {
+    return null;
+  }
+}
+
 export function getPortfolio(): Promise<PortfolioSummary> {
   return apiFetch<PortfolioSummary>("/api/portfolio", { cache: "no-store" });
 }

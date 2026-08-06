@@ -6,9 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.market import Market
+from app.models.market_analysis import MarketAnalysisRecord
 from app.models.price_history import PriceHistory
 from app.schemas.market import MarketOut, MarketSort, PricePoint
+from app.schemas.ranking import OpportunityScore
 from app.services.live_history import fetch_live_history
+from app.services.ranking import compute_opportunity
 from app.services.signals import Signal, compute_signal
 
 router = APIRouter(prefix="/api/markets", tags=["markets"])
@@ -27,17 +30,28 @@ def _price_change_24h(db: Session, market: Market) -> float:
     return round(market.yes_price - oldest.yes_price, 4)
 
 
-def _signal(db: Session, market: Market) -> Signal:
-    # most recent 50 rows, then re-sort ascending for compute_signal
+def _recent_history(db: Session, market: Market, limit: int = 50) -> list[PriceHistory]:
+    # most recent `limit` rows, re-sorted ascending
     recent = (
         db.query(PriceHistory)
         .filter(PriceHistory.market_id == market.id)
         .order_by(PriceHistory.timestamp.desc())
-        .limit(50)
+        .limit(limit)
         .all()
     )
     recent.reverse()
-    return compute_signal(market, recent)
+    return recent
+
+
+def _signal(market: Market, recent_history: list[PriceHistory]) -> Signal:
+    return compute_signal(market, recent_history)
+
+
+def _opportunity(db: Session, market: Market, recent_history: list[PriceHistory]) -> OpportunityScore:
+    cached = (
+        db.query(MarketAnalysisRecord).filter(MarketAnalysisRecord.market_id == market.id).one_or_none()
+    )
+    return compute_opportunity(market, recent_history, cached)
 
 
 @router.get("", response_model=list[MarketOut])
@@ -47,12 +61,18 @@ def list_markets(
     db: Session = Depends(get_db),
 ) -> list[MarketOut]:
     markets = db.query(Market).all()
-    results = [
-        MarketOut.model_validate(m, from_attributes=True).model_copy(
-            update={"price_change_24h": _price_change_24h(db, m), "signal": _signal(db, m)}
+    results = []
+    for m in markets:
+        recent_history = _recent_history(db, m)
+        results.append(
+            MarketOut.model_validate(m, from_attributes=True).model_copy(
+                update={
+                    "price_change_24h": _price_change_24h(db, m),
+                    "signal": _signal(m, recent_history),
+                    "opportunity": _opportunity(db, m, recent_history),
+                }
+            )
         )
-        for m in markets
-    ]
 
     if sort_by == MarketSort.volume:
         results.sort(key=lambda m: m.volume, reverse=True)
@@ -62,6 +82,8 @@ def list_markets(
         results.sort(key=lambda m: m.expiration_date or datetime.max)
     elif sort_by == MarketSort.prob_change:
         results.sort(key=lambda m: abs(m.price_change_24h), reverse=True)
+    elif sort_by == MarketSort.opportunity:
+        results.sort(key=lambda m: m.opportunity.total if m.opportunity else 0, reverse=True)
 
     return results[:limit]
 
@@ -72,8 +94,13 @@ def get_market(ticker: str, db: Session = Depends(get_db)) -> MarketOut:
     if market is None:
         raise HTTPException(status_code=404, detail=f"Market '{ticker}' not found")
     out = MarketOut.model_validate(market, from_attributes=True)
+    recent_history = _recent_history(db, market)
     return out.model_copy(
-        update={"price_change_24h": _price_change_24h(db, market), "signal": _signal(db, market)}
+        update={
+            "price_change_24h": _price_change_24h(db, market),
+            "signal": _signal(market, recent_history),
+            "opportunity": _opportunity(db, market, recent_history),
+        }
     )
 
 

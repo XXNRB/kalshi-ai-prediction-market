@@ -1,8 +1,10 @@
 import Link from "next/link";
+import OpportunityStars from "@/components/OpportunityStars";
 import { SignalPill } from "@/components/SignalBadge";
 import type { Market, MarketSort } from "@/lib/types";
 
 const SORT_OPTIONS: { value: MarketSort; label: string }[] = [
+  { value: "opportunity", label: "Best Opportunities" },
   { value: "volume", label: "Highest Volume" },
   { value: "movers", label: "Biggest Movers" },
   { value: "expiration", label: "Closest Expiration" },
@@ -50,6 +52,7 @@ export default function MarketTable({
               <tr>
                 <th className="px-4 py-3">Market</th>
                 <th className="px-4 py-3">Category</th>
+                <th className="px-4 py-3">Opportunity</th>
                 <th className="px-4 py-3 text-right">YES</th>
                 <th className="px-4 py-3 text-right">NO</th>
                 <th className="px-4 py-3 text-right">24h Δ</th>
@@ -70,6 +73,9 @@ export default function MarketTable({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-slate-400">{m.category ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    <OpportunityStars opportunity={m.opportunity} />
+                  </td>
                   <td className="px-4 py-3 text-right tabular-nums">{(m.yes_price * 100).toFixed(0)}¢</td>
                   <td className="px-4 py-3 text-right tabular-nums">{(m.no_price * 100).toFixed(0)}¢</td>
                   <td

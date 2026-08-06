@@ -1,4 +1,4 @@
-export type MarketSort = "volume" | "movers" | "expiration" | "prob_change";
+export type MarketSort = "volume" | "movers" | "expiration" | "prob_change" | "opportunity";
 
 export type SignalType = "entry" | "exit" | "none";
 
@@ -6,6 +6,21 @@ export interface Signal {
   type: SignalType;
   label: string | null;
   explanation: string | null;
+}
+
+export interface ScoreComponent {
+  label: string;
+  score: number;
+  max_score: number;
+  explanation: string;
+}
+
+export interface OpportunityScore {
+  total: number;
+  stars: number;
+  tier_label: string;
+  researched: boolean;
+  components: ScoreComponent[];
 }
 
 export interface Market {
@@ -23,6 +38,7 @@ export interface Market {
   updated_at: string;
   price_change_24h: number;
   signal: Signal | null;
+  opportunity: OpportunityScore | null;
 }
 
 export interface PricePoint {
@@ -43,6 +59,7 @@ export interface MarketAnalysis {
   recommendation: string;
   suggested_allocation_pct: number;
   data_sources: string[];
+  analyzed_at: string | null;
 }
 
 export type BuyPosition = "YES" | "NO";

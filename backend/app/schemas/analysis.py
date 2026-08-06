@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -16,3 +19,4 @@ class MarketAnalysis(BaseModel):
     recommendation: str
     suggested_allocation_pct: float = Field(ge=0, le=100)
     data_sources: list[str]
+    analyzed_at: Optional[datetime] = None

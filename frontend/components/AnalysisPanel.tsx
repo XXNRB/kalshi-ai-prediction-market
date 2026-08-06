@@ -10,19 +10,24 @@ const MIN_REFRESH_INTERVAL_MS = 60000; // don't auto re-run more than once a min
 export default function AnalysisPanel({
   ticker,
   currentYesPrice,
+  initialAnalysis,
 }: {
   ticker: string;
   currentYesPrice: number;
+  initialAnalysis: MarketAnalysis | null;
 }) {
-  const [analysis, setAnalysis] = useState<MarketAnalysis | null>(null);
+  const initialAtPrice = initialAnalysis?.market_implied_probability ?? null;
+  const initialAt = initialAnalysis?.analyzed_at ? new Date(initialAnalysis.analyzed_at) : null;
+
+  const [analysis, setAnalysis] = useState<MarketAnalysis | null>(initialAnalysis);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [analyzedAtPrice, setAnalyzedAtPrice] = useState<number | null>(null);
-  const [analyzedAt, setAnalyzedAt] = useState<Date | null>(null);
+  const [analyzedAtPrice, setAnalyzedAtPrice] = useState<number | null>(initialAtPrice);
+  const [analyzedAt, setAnalyzedAt] = useState<Date | null>(initialAt);
   const [autoNote, setAutoNote] = useState<string | null>(null);
 
-  const analyzedAtPriceRef = useRef<number | null>(null);
-  const lastRunAtRef = useRef(0);
+  const analyzedAtPriceRef = useRef<number | null>(initialAtPrice);
+  const lastRunAtRef = useRef(initialAt ? initialAt.getTime() : 0);
   const loadingRef = useRef(false);
 
   async function runAnalysis(auto: boolean) {

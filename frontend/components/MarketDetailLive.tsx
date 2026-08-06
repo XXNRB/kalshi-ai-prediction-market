@@ -2,22 +2,25 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AnalysisPanel from "@/components/AnalysisPanel";
+import OpportunityBreakdown from "@/components/OpportunityBreakdown";
 import PriceChart from "@/components/PriceChart";
 import SignalCallout from "@/components/SignalBadge";
 import TradePanel from "@/components/TradePanel";
 import YourPosition from "@/components/YourPosition";
 import { getPortfolio } from "@/lib/api";
 import { useLiveMarket } from "@/lib/useLiveMarket";
-import type { Market, PortfolioSummary, PricePoint } from "@/lib/types";
+import type { Market, MarketAnalysis, PortfolioSummary, PricePoint } from "@/lib/types";
 
 export default function MarketDetailLive({
   ticker,
   initialMarket,
   initialHistory,
+  initialAnalysis,
 }: {
   ticker: string;
   initialMarket: Market;
   initialHistory: PricePoint[];
+  initialAnalysis: MarketAnalysis | null;
 }) {
   const market = useLiveMarket(ticker, initialMarket);
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
@@ -56,6 +59,8 @@ export default function MarketDetailLive({
         />
       </div>
 
+      <OpportunityBreakdown opportunity={market.opportunity} />
+
       <SignalCallout signal={market.signal} />
 
       <YourPosition trades={myOpenPositions} onSold={refreshPortfolio} />
@@ -71,7 +76,11 @@ export default function MarketDetailLive({
         onTraded={refreshPortfolio}
       />
 
-      <AnalysisPanel ticker={ticker} currentYesPrice={market.yes_price} />
+      <AnalysisPanel
+        ticker={ticker}
+        currentYesPrice={market.yes_price}
+        initialAnalysis={initialAnalysis}
+      />
     </div>
   );
 }

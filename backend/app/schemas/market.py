@@ -4,6 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.ranking import OpportunityScore
 from app.services.signals import Signal
 
 
@@ -12,6 +13,7 @@ class MarketSort(str, Enum):
     movers = "movers"
     expiration = "expiration"
     prob_change = "prob_change"
+    opportunity = "opportunity"
 
 
 class MarketOut(BaseModel):
@@ -31,6 +33,7 @@ class MarketOut(BaseModel):
     updated_at: datetime
     price_change_24h: float = 0.0
     signal: Optional[Signal] = None
+    opportunity: Optional[OpportunityScore] = None
 
 
 class PricePoint(BaseModel):
