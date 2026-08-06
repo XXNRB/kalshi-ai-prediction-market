@@ -8,8 +8,8 @@ from app.database import Base
 
 
 class Trade(Base):
-    """Paper-trading trade record. Buy/sell logic lands in a later phase;
-    this table exists now so the schema is stable from day one."""
+    """Paper-trading trade record. Open position when exit_price is None,
+    closed once sold (see app/services/portfolio.py)."""
 
     __tablename__ = "trades"
 
@@ -21,5 +21,6 @@ class Trade(Base):
     amount: Mapped[float] = mapped_column(Float)
     profit_loss: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    exit_timestamp: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     market: Mapped["Market"] = relationship("Market", back_populates="trades")

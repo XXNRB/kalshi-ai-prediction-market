@@ -44,3 +44,32 @@ export interface MarketAnalysis {
   suggested_allocation_pct: number;
   data_sources: string[];
 }
+
+export type BuyPosition = "YES" | "NO";
+
+export interface Trade {
+  id: number;
+  ticker: string;
+  market_title: string;
+  position: BuyPosition;
+  status: "open" | "closed";
+  entry_price: number;
+  exit_price: number | null;
+  amount: number;
+  contracts: number;
+  current_price: number | null;
+  profit_loss: number | null;
+  timestamp: string;
+  exit_timestamp: string | null;
+}
+
+export interface PortfolioSummary {
+  starting_balance: number;
+  cash_balance: number;
+  portfolio_value: number;
+  total_pl: number;
+  roi_pct: number;
+  win_rate_pct: number | null;
+  open_positions: Trade[];
+  closed_trades: Trade[];
+}

@@ -1,4 +1,12 @@
-import type { Market, MarketAnalysis, MarketSort, PricePoint } from "./types";
+import type {
+  BuyPosition,
+  Market,
+  MarketAnalysis,
+  MarketSort,
+  PortfolioSummary,
+  PricePoint,
+  Trade,
+} from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -9,7 +17,14 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`API ${res.status}: ${body}`);
+    let message = body || `API ${res.status}`;
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed?.detail) message = parsed.detail;
+    } catch {
+      // body wasn't JSON — fall back to the raw text above
+    }
+    throw new Error(message);
   }
   return res.json() as Promise<T>;
 }
@@ -28,4 +43,19 @@ export function getMarketHistory(ticker: string): Promise<PricePoint[]> {
 
 export function analyzeMarket(ticker: string): Promise<MarketAnalysis> {
   return apiFetch<MarketAnalysis>(`/api/markets/${ticker}/analyze`, { method: "POST" });
+}
+
+export function getPortfolio(): Promise<PortfolioSummary> {
+  return apiFetch<PortfolioSummary>("/api/portfolio", { cache: "no-store" });
+}
+
+export function buyPosition(ticker: string, position: BuyPosition, amount: number): Promise<Trade> {
+  return apiFetch<Trade>("/api/portfolio/trades", {
+    method: "POST",
+    body: JSON.stringify({ ticker, position, amount }),
+  });
+}
+
+export function sellPosition(tradeId: number): Promise<Trade> {
+  return apiFetch<Trade>(`/api/portfolio/trades/${tradeId}/sell`, { method: "POST" });
 }

@@ -1,10 +1,14 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import AnalysisPanel from "@/components/AnalysisPanel";
 import PriceChart from "@/components/PriceChart";
 import SignalCallout from "@/components/SignalBadge";
+import TradePanel from "@/components/TradePanel";
+import YourPosition from "@/components/YourPosition";
+import { getPortfolio } from "@/lib/api";
 import { useLiveMarket } from "@/lib/useLiveMarket";
-import type { Market, PricePoint } from "@/lib/types";
+import type { Market, PortfolioSummary, PricePoint } from "@/lib/types";
 
 export default function MarketDetailLive({
   ticker,
@@ -16,6 +20,21 @@ export default function MarketDetailLive({
   initialHistory: PricePoint[];
 }) {
   const market = useLiveMarket(ticker, initialMarket);
+  const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
+
+  const refreshPortfolio = useCallback(() => {
+    getPortfolio()
+      .then(setPortfolio)
+      .catch(() => {
+        // portfolio is a bonus panel here — a failed fetch shouldn't break the page
+      });
+  }, []);
+
+  useEffect(() => {
+    refreshPortfolio();
+  }, [refreshPortfolio]);
+
+  const myOpenPositions = portfolio?.open_positions.filter((t) => t.ticker === ticker) ?? [];
 
   return (
     <div className="space-y-6">
@@ -39,10 +58,18 @@ export default function MarketDetailLive({
 
       <SignalCallout signal={market.signal} />
 
+      <YourPosition trades={myOpenPositions} onSold={refreshPortfolio} />
+
       <div className="rounded-lg border border-slate-800 p-5">
         <h2 className="mb-3 text-lg font-semibold">Price History</h2>
         <PriceChart ticker={ticker} initialHistory={initialHistory} />
       </div>
+
+      <TradePanel
+        market={market}
+        cashBalance={portfolio?.cash_balance ?? null}
+        onTraded={refreshPortfolio}
+      />
 
       <AnalysisPanel ticker={ticker} currentYesPrice={market.yes_price} />
     </div>

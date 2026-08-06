@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     ingestion_interval_seconds: int = 60
     ingestion_market_limit: int = 50
     cors_origins: list[str] = ["http://localhost:3000"]
+    paper_trading_starting_balance: float = 100.0
 
 
 settings = Settings()
