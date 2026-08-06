@@ -1,38 +1,94 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { analyzeMarket } from "@/lib/api";
 import type { MarketAnalysis } from "@/lib/types";
 
-export default function AnalysisPanel({ ticker }: { ticker: string }) {
+const AUTO_REFRESH_THRESHOLD = 0.03; // 3 percentage points
+const MIN_REFRESH_INTERVAL_MS = 60000; // don't auto re-run more than once a minute
+
+export default function AnalysisPanel({
+  ticker,
+  currentYesPrice,
+}: {
+  ticker: string;
+  currentYesPrice: number;
+}) {
   const [analysis, setAnalysis] = useState<MarketAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [analyzedAtPrice, setAnalyzedAtPrice] = useState<number | null>(null);
+  const [analyzedAt, setAnalyzedAt] = useState<Date | null>(null);
+  const [autoNote, setAutoNote] = useState<string | null>(null);
 
-  async function handleAnalyze() {
+  const analyzedAtPriceRef = useRef<number | null>(null);
+  const lastRunAtRef = useRef(0);
+  const loadingRef = useRef(false);
+
+  async function runAnalysis(auto: boolean) {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
+    const priceBefore = analyzedAtPriceRef.current;
+
     try {
-      setAnalysis(await analyzeMarket(ticker));
+      const result = await analyzeMarket(ticker);
+      const now = new Date();
+      setAnalysis(result);
+      setAnalyzedAtPrice(currentYesPrice);
+      setAnalyzedAt(now);
+      analyzedAtPriceRef.current = currentYesPrice;
+      lastRunAtRef.current = now.getTime();
+      setAutoNote(
+        auto && priceBefore !== null
+          ? `Updated automatically at ${now.toLocaleTimeString()} — price moved from ${(priceBefore * 100).toFixed(0)}% to ${(currentYesPrice * 100).toFixed(0)}%`
+          : null
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed.");
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   }
 
+  useEffect(() => {
+    if (analyzedAtPriceRef.current === null) return; // no analysis yet — nothing to auto-refresh
+    const moved = Math.abs(currentYesPrice - analyzedAtPriceRef.current) >= AUTO_REFRESH_THRESHOLD;
+    const cooledDown = Date.now() - lastRunAtRef.current >= MIN_REFRESH_INTERVAL_MS;
+    if (moved && cooledDown && !loadingRef.current) {
+      runAnalysis(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentYesPrice]);
+
   return (
     <div className="rounded-lg border border-slate-800 p-5">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-1 flex items-center justify-between">
         <h2 className="text-lg font-semibold">AI Research Analysis</h2>
         <button
-          onClick={handleAnalyze}
+          onClick={() => runAnalysis(false)}
           disabled={loading}
           className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Analyzing…" : "Generate AI Analysis"}
+          {loading ? "Analyzing…" : analysis ? "Refresh Analysis" : "Generate AI Analysis"}
         </button>
       </div>
+
+      {analyzedAt && (
+        <p className="mb-4 text-xs text-slate-500">
+          Last analyzed {analyzedAt.toLocaleTimeString()} at{" "}
+          {analyzedAtPrice !== null ? (analyzedAtPrice * 100).toFixed(0) : "—"}% YES · live price now{" "}
+          {(currentYesPrice * 100).toFixed(0)}%. Auto-refreshes when price moves ≥3 points.
+        </p>
+      )}
+
+      {autoNote && (
+        <div className="mb-4 rounded-md border border-emerald-800 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-300">
+          {autoNote}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-md border border-rose-800 bg-rose-950/40 px-3 py-2 text-sm text-rose-300">

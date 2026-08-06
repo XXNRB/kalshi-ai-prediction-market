@@ -32,20 +32,47 @@ class KalshiClient:
         markets: list[dict[str, Any]] = []
         for event in events:
             category = event.get("category")
+            series_ticker = event.get("series_ticker")
             for market in event.get("markets", []):
                 market["category"] = category
+                market["series_ticker"] = series_ticker
                 markets.append(market)
         return markets
 
+    async def get_candlesticks(
+        self,
+        series_ticker: str,
+        ticker: str,
+        start_ts: int,
+        end_ts: int,
+        period_interval: int = 60,
+    ) -> list[dict[str, Any]]:
+        """Fetch real historical candlesticks for one market. period_interval
+        is in minutes; Kalshi only accepts 1, 60, or 1440."""
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=15.0) as client:
+            resp = await client.get(
+                f"/series/{series_ticker}/markets/{ticker}/candlesticks",
+                params={"start_ts": start_ts, "end_ts": end_ts, "period_interval": period_interval},
+            )
+            resp.raise_for_status()
+            return resp.json().get("candlesticks", [])
 
-def parse_expiration(raw: dict[str, Any]) -> Optional[datetime]:
-    value = raw.get("expiration_time") or raw.get("close_time")
+
+def parse_kalshi_datetime(value: Optional[str]) -> Optional[datetime]:
     if not value:
         return None
     try:
         return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
     except ValueError:
         return None
+
+
+def parse_expiration(raw: dict[str, Any]) -> Optional[datetime]:
+    return parse_kalshi_datetime(raw.get("expiration_time") or raw.get("close_time"))
+
+
+def parse_open_time(raw: dict[str, Any]) -> Optional[datetime]:
+    return parse_kalshi_datetime(raw.get("open_time") or raw.get("created_time"))
 
 
 def dollars_to_price(value: Optional[str]) -> float:
@@ -66,3 +93,14 @@ def fixed_point_to_int(value: Optional[str]) -> int:
         return int(round(float(value)))
     except ValueError:
         return 0
+
+
+def parse_candlestick(raw: dict[str, Any]) -> dict[str, Any]:
+    """Convert one Kalshi candlestick into our PricePoint shape."""
+    yes_price = dollars_to_price((raw.get("yes_bid") or {}).get("close_dollars"))
+    return {
+        "timestamp": datetime.utcfromtimestamp(raw["end_period_ts"]),
+        "yes_price": yes_price,
+        "no_price": round(1 - yes_price, 4),
+        "volume": fixed_point_to_int(raw.get("volume_fp")),
+    }

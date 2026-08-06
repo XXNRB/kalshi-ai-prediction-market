@@ -15,6 +15,7 @@ class FakeKalshiClient:
 
 RAW_MARKET = {
     "ticker": "BTC-70K",
+    "series_ticker": "KXBTC",
     "title": "Will BTC exceed $70,000?",
     "category": "Crypto",
     "yes_bid_dollars": "0.4200",
@@ -22,6 +23,7 @@ RAW_MARKET = {
     "volume_fp": "1000.00",
     "open_interest_fp": "500.00",
     "expiration_time": "2026-08-01T00:00:00Z",
+    "open_time": "2025-08-28T20:45:00Z",
 }
 
 
@@ -35,6 +37,8 @@ async def test_ingest_creates_market_and_price_history(db_session):
     market = db_session.query(Market).filter(Market.ticker == "BTC-70K").one()
     assert market.yes_price == 0.42
     assert market.title == "Will BTC exceed $70,000?"
+    assert market.series_ticker == "KXBTC"
+    assert market.kalshi_open_time is not None and market.kalshi_open_time.year == 2025
 
     history = db_session.query(PriceHistory).filter(PriceHistory.market_id == market.id).all()
     assert len(history) == 1

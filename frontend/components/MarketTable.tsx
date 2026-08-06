@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SignalPill } from "@/components/SignalBadge";
 import type { Market, MarketSort } from "@/lib/types";
 
 const SORT_OPTIONS: { value: MarketSort; label: string }[] = [
@@ -61,9 +62,12 @@ export default function MarketTable({
               {markets.map((m) => (
                 <tr key={m.ticker} className="hover:bg-slate-900/60">
                   <td className="px-4 py-3">
-                    <Link href={`/markets/${m.ticker}`} className="font-medium hover:text-emerald-400">
-                      {m.title}
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/markets/${m.ticker}`} className="font-medium hover:text-emerald-400">
+                        {m.title}
+                      </Link>
+                      <SignalPill signal={m.signal} />
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-slate-400">{m.category ?? "—"}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{(m.yes_price * 100).toFixed(0)}¢</td>

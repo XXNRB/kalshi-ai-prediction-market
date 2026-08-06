@@ -12,6 +12,7 @@ class Market(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     ticker: Mapped[str] = mapped_column(String, unique=True, index=True)
+    series_ticker: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     title: Mapped[str] = mapped_column(String)
     category: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -21,6 +22,7 @@ class Market(Base):
     open_interest: Mapped[int] = mapped_column(Integer, default=0)
     liquidity: Mapped[float] = mapped_column(Float, default=0.0)
     expiration_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    kalshi_open_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

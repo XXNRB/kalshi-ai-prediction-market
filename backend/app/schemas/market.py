@@ -4,6 +4,8 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from app.services.signals import Signal
+
 
 class MarketSort(str, Enum):
     volume = "volume"
@@ -28,6 +30,7 @@ class MarketOut(BaseModel):
     expiration_date: Optional[datetime]
     updated_at: datetime
     price_change_24h: float = 0.0
+    signal: Optional[Signal] = None
 
 
 class PricePoint(BaseModel):

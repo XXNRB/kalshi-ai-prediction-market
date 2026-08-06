@@ -11,6 +11,7 @@ from app.services.kalshi_client import (
     dollars_to_price,
     fixed_point_to_int,
     parse_expiration,
+    parse_open_time,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ async def ingest_markets(db: Session, client: Optional[KalshiClient] = None) -> 
             db.add(market)
 
         market.title = raw.get("title", ticker)
+        market.series_ticker = raw.get("series_ticker")
         market.category = raw.get("category")
         market.description = raw.get("rules_primary") or raw.get("yes_sub_title")
         market.yes_price = yes_price
@@ -50,6 +52,7 @@ async def ingest_markets(db: Session, client: Optional[KalshiClient] = None) -> 
         market.open_interest = open_interest
         market.liquidity = liquidity
         market.expiration_date = parse_expiration(raw)
+        market.kalshi_open_time = parse_open_time(raw)
 
         db.flush()  # ensures market.id is populated for new rows
 

@@ -1,5 +1,13 @@
 export type MarketSort = "volume" | "movers" | "expiration" | "prob_change";
 
+export type SignalType = "entry" | "exit" | "none";
+
+export interface Signal {
+  type: SignalType;
+  label: string | null;
+  explanation: string | null;
+}
+
 export interface Market {
   id: number;
   ticker: string;
@@ -14,6 +22,7 @@ export interface Market {
   expiration_date: string | null;
   updated_at: string;
   price_change_24h: number;
+  signal: Signal | null;
 }
 
 export interface PricePoint {
