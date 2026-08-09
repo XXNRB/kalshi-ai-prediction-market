@@ -22,5 +22,7 @@ class Trade(Base):
     profit_loss: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     exit_timestamp: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    peak_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    peak_profit_loss: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     market: Mapped["Market"] = relationship("Market", back_populates="trades")

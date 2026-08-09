@@ -36,7 +36,7 @@ export default function YourPosition({
       <div className="space-y-3">
         {trades.map((t) => {
           const pl = t.profit_loss ?? 0;
-          const stats = t.position_stats;
+          const metrics = t.metrics;
           return (
             <div key={t.id} className="space-y-1.5">
               <div className="flex items-center justify-between text-sm">
@@ -60,7 +60,7 @@ export default function YourPosition({
                   </button>
                 </div>
               </div>
-              {stats && <PositionStatsRow stats={stats} />}
+              {metrics && <PositionStatsRow metrics={metrics} decision={t.exit_decision} />}
             </div>
           );
         })}

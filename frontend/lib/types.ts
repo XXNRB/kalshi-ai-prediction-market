@@ -64,14 +64,55 @@ export interface MarketAnalysis {
 
 export type BuyPosition = "YES" | "NO";
 
-export interface PositionStats {
+export interface PositionMetrics {
   roi_pct: number;
   probability_change_pts: number;
   expected_value_pct: number | null;
   momentum_pts_per_step: number;
   risk_score: number;
-  action: "hold" | "consider_profit";
-  reason: string;
+  unrealized_profit_loss: number;
+  peak_price: number;
+  peak_profit_loss: number;
+}
+
+export type ExitAction = "HOLD" | "SELL_PARTIAL" | "SELL_ALL";
+export type ExitUrgency = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type ExitMode = "recommend_only" | "auto_execute";
+
+export interface ExitDecision {
+  action: ExitAction;
+  confidence: number;
+  urgency: ExitUrgency;
+  reason_codes: string[];
+  summary: string;
+  sell_fraction: number | null;
+}
+
+export interface ExitSettings {
+  mode: ExitMode;
+  updated_at: string;
+}
+
+export interface ExitDecisionLogEntry {
+  id: number;
+  trade_id: number;
+  ticker: string;
+  side: BuyPosition;
+  timestamp: string;
+  mode: ExitMode;
+  entry_price: number;
+  current_price: number;
+  peak_price: number;
+  contracts: number;
+  unrealized_profit_loss: number;
+  realized_profit_loss: number | null;
+  action: ExitAction;
+  confidence: number;
+  urgency: ExitUrgency;
+  reason_codes: string[];
+  summary: string;
+  executed: boolean;
+  execution_price: number | null;
 }
 
 export interface Trade {
@@ -88,7 +129,8 @@ export interface Trade {
   profit_loss: number | null;
   timestamp: string;
   exit_timestamp: string | null;
-  position_stats: PositionStats | null;
+  metrics: PositionMetrics | null;
+  exit_decision: ExitDecision | null;
 }
 
 export interface PortfolioSummary {

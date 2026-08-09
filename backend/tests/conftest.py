@@ -3,7 +3,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.database import Base
-from app.models import market, market_analysis, price_history, trade  # noqa: F401
+from app.models import (  # noqa: F401
+    exit_decision_log,
+    exit_strategy,
+    market,
+    market_analysis,
+    price_history,
+    trade,
+)
 
 
 @pytest.fixture()

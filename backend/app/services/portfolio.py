@@ -8,11 +8,10 @@ from app.models.market import Market
 from app.models.market_analysis import MarketAnalysisRecord
 from app.models.price_history import PriceHistory
 from app.models.trade import Trade
-from app.schemas.portfolio import PortfolioSummary, PositionStats, Side, TradeOut
+from app.schemas.portfolio import PortfolioSummary, PositionMetrics, Side, TradeOut
 from app.services import ranking
 from app.services.signals import get_recent_history
 
-TAKE_PROFIT_THRESHOLD_PCT = 20.0
 MOMENTUM_WINDOW = 5
 
 
@@ -50,41 +49,47 @@ def _expected_value_pct(trade: Trade, current_price: float, cached: Optional[Mar
     return round((implied_prob_of_win - current_price) / current_price * 100, 1)
 
 
-def compute_position_stats(
+def compute_position_metrics(
     trade: Trade,
     market: Market,
     history: List[PriceHistory],
     cached: Optional[MarketAnalysisRecord],
-) -> PositionStats:
+    db: Optional[Session] = None,
+) -> PositionMetrics:
+    """Pure numbers for an open position — no decisions. Deciding what to
+    do with these lives in services/exit_engine.py, not here.
+
+    Peak price/P&L ratchet up monotonically (never decrease) so a later
+    exit strategy can recognize a retracement, e.g. 40c -> 82c -> 72c,
+    instead of only ever comparing 72c to the 40c entry. When `db` is
+    given, a new high-water mark is persisted onto the Trade row — an
+    idempotent, ratchet-only write, safe to trigger from a read path."""
     current_price = market.yes_price if trade.position == "YES" else market.no_price
+    contracts = _contracts(trade)
+    unrealized_profit_loss = round(contracts * current_price - trade.amount, 4)
     roi_pct = round((current_price - trade.entry_price) / trade.entry_price * 100, 1)
     probability_change_pts = round((current_price - trade.entry_price) * 100, 1)
     risk, _ = ranking.risk_score(market, history, cached)
 
-    if roi_pct >= TAKE_PROFIT_THRESHOLD_PCT:
-        action = "consider_profit"
-        reason = (
-            f"Up {roi_pct:.0f}% from your entry price — past the {TAKE_PROFIT_THRESHOLD_PCT:.0f}% mark "
-            "where locking in the gain is worth considering."
-        )
-    else:
-        action = "hold"
-        if roi_pct > 0:
-            movement = f"Up {roi_pct:.0f}%"
-        elif roi_pct < 0:
-            movement = f"Down {abs(roi_pct):.0f}%"
-        else:
-            movement = "Flat"
-        reason = f"{movement} — below the {TAKE_PROFIT_THRESHOLD_PCT:.0f}% threshold where taking profit gets flagged."
+    prior_peak_price = trade.peak_price if trade.peak_price is not None else trade.entry_price
+    prior_peak_pl = trade.peak_profit_loss if trade.peak_profit_loss is not None else 0.0
+    peak_price = max(prior_peak_price, current_price)
+    peak_profit_loss = max(prior_peak_pl, unrealized_profit_loss)
 
-    return PositionStats(
+    if db is not None and (peak_price != trade.peak_price or peak_profit_loss != trade.peak_profit_loss):
+        trade.peak_price = peak_price
+        trade.peak_profit_loss = peak_profit_loss
+        db.commit()
+
+    return PositionMetrics(
         roi_pct=roi_pct,
         probability_change_pts=probability_change_pts,
         expected_value_pct=_expected_value_pct(trade, current_price, cached),
         momentum_pts_per_step=_momentum(trade, history),
         risk_score=risk,
-        action=action,
-        reason=reason,
+        unrealized_profit_loss=unrealized_profit_loss,
+        peak_price=round(peak_price, 4),
+        peak_profit_loss=round(peak_profit_loss, 4),
     )
 
 
@@ -94,7 +99,7 @@ def to_trade_out(trade: Trade, db: Optional[Session] = None) -> TradeOut:
     current_price = _current_price_for_trade(trade) if is_open else None
     profit_loss = (contracts * current_price - trade.amount) if is_open else trade.profit_loss
 
-    position_stats = None
+    metrics = None
     if is_open and db is not None:
         history = get_recent_history(db, trade.market)
         cached = (
@@ -102,7 +107,7 @@ def to_trade_out(trade: Trade, db: Optional[Session] = None) -> TradeOut:
             .filter(MarketAnalysisRecord.market_id == trade.market_id)
             .one_or_none()
         )
-        position_stats = compute_position_stats(trade, trade.market, history, cached)
+        metrics = compute_position_metrics(trade, trade.market, history, cached, db)
 
     return TradeOut(
         id=trade.id,
@@ -118,7 +123,7 @@ def to_trade_out(trade: Trade, db: Optional[Session] = None) -> TradeOut:
         profit_loss=round(profit_loss, 4) if profit_loss is not None else None,
         timestamp=trade.timestamp,
         exit_timestamp=trade.exit_timestamp,
-        position_stats=position_stats,
+        metrics=metrics,
     )
 
 

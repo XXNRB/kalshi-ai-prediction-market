@@ -23,6 +23,13 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    from app.models import market, market_analysis, price_history, trade  # noqa: F401
+    from app.models import (  # noqa: F401
+        exit_decision_log,
+        exit_strategy,
+        market,
+        market_analysis,
+        price_history,
+        trade,
+    )
 
     Base.metadata.create_all(bind=engine)

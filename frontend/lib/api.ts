@@ -2,6 +2,9 @@ import type {
   AllocationResponse,
   BacktestResult,
   BuyPosition,
+  ExitDecisionLogEntry,
+  ExitMode,
+  ExitSettings,
   Market,
   MarketAnalysis,
   MarketSort,
@@ -75,6 +78,21 @@ export function runAllocation(tickers: string[]): Promise<AllocationResponse> {
     method: "POST",
     body: JSON.stringify({ tickers }),
   });
+}
+
+export function getExitSettings(): Promise<ExitSettings> {
+  return apiFetch<ExitSettings>("/api/portfolio/exit-settings", { cache: "no-store" });
+}
+
+export function updateExitSettings(mode: ExitMode): Promise<ExitSettings> {
+  return apiFetch<ExitSettings>("/api/portfolio/exit-settings", {
+    method: "PUT",
+    body: JSON.stringify({ mode }),
+  });
+}
+
+export function getExitLog(limit = 50): Promise<ExitDecisionLogEntry[]> {
+  return apiFetch<ExitDecisionLogEntry[]>(`/api/portfolio/exit-log?limit=${limit}`, { cache: "no-store" });
 }
 
 export function runBacktest(

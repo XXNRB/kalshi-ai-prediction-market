@@ -4,6 +4,8 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { getPortfolio, sellPosition } from "@/lib/api";
 import AllocationPlanner from "@/components/AllocationPlanner";
+import ExitDecisionLog from "@/components/ExitDecisionLog";
+import ExitModeToggle from "@/components/ExitModeToggle";
 import PositionStatsRow from "@/components/PositionStatsRow";
 import type { PortfolioSummary, Trade } from "@/lib/types";
 
@@ -79,6 +81,8 @@ export default function PortfolioLive({ initialSummary }: { initialSummary: Port
         </div>
       )}
 
+      <ExitModeToggle />
+
       <AllocationPlanner cashBalance={summary.cash_balance} onTraded={refresh} />
 
       <div>
@@ -131,10 +135,10 @@ export default function PortfolioLive({ initialSummary }: { initialSummary: Port
                         </button>
                       </td>
                     </tr>
-                    {t.position_stats && (
+                    {t.metrics && (
                       <tr className="bg-slate-950/40">
                         <td colSpan={7} className="px-4 pb-3">
-                          <PositionStatsRow stats={t.position_stats} />
+                          <PositionStatsRow metrics={t.metrics} decision={t.exit_decision} />
                         </td>
                       </tr>
                     )}
@@ -189,6 +193,8 @@ export default function PortfolioLive({ initialSummary }: { initialSummary: Port
           </div>
         )}
       </div>
+
+      <ExitDecisionLog />
     </div>
   );
 }

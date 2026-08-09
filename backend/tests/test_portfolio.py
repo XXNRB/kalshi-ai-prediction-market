@@ -4,7 +4,7 @@ from app.models.market import Market
 from app.models.market_analysis import MarketAnalysisRecord
 from app.models.trade import Trade
 from app.services import portfolio as portfolio_service
-from app.services.portfolio import NotFoundError, PortfolioError, compute_position_stats
+from app.services.portfolio import NotFoundError, PortfolioError, compute_position_metrics
 
 
 @pytest.fixture(autouse=True)
@@ -147,48 +147,59 @@ def _build_analysis_record(ai_estimated_probability: float, confidence: int = 8)
     )
 
 
-def test_compute_position_stats_flags_take_profit_above_threshold():
+def test_compute_position_metrics_roi_and_probability_change():
     market = _build_market(yes_price=0.58, no_price=0.42)
     trade = Trade(position="YES", entry_price=0.34, amount=10.0)
 
-    stats = compute_position_stats(trade, market, history=[], cached=None)
+    metrics = compute_position_metrics(trade, market, history=[], cached=None)
 
-    assert stats.roi_pct == pytest.approx(70.6, abs=0.1)
-    assert stats.action == "consider_profit"
-    assert "20%" in stats.reason
-    assert stats.expected_value_pct is None  # no cached analysis to reuse
-
-
-def test_compute_position_stats_holds_below_threshold():
-    market = _build_market(yes_price=0.63, no_price=0.37)
-    trade = Trade(position="YES", entry_price=0.61, amount=10.0)
-
-    stats = compute_position_stats(trade, market, history=[], cached=None)
-
-    assert stats.roi_pct == pytest.approx(3.3, abs=0.1)
-    assert stats.action == "hold"
+    assert metrics.roi_pct == pytest.approx(70.6, abs=0.1)
+    assert metrics.probability_change_pts == pytest.approx(24.0, abs=0.1)
+    assert metrics.expected_value_pct is None  # no cached analysis to reuse
+    # no `action`/`reason` on metrics — that's the exit engine's job now
+    assert not hasattr(metrics, "action")
 
 
-def test_compute_position_stats_expected_value_uses_cached_analysis():
+def test_compute_position_metrics_expected_value_uses_cached_analysis():
     market = _build_market(yes_price=0.50, no_price=0.50)
     trade = Trade(position="YES", entry_price=0.40, amount=10.0)
     cached = _build_analysis_record(ai_estimated_probability=0.65)
 
-    stats = compute_position_stats(trade, market, history=[], cached=cached)
+    metrics = compute_position_metrics(trade, market, history=[], cached=cached)
 
     # AI thinks YES is worth 0.65, current price is 0.50 -> +30% implied edge
-    assert stats.expected_value_pct == pytest.approx(30.0, abs=0.1)
+    assert metrics.expected_value_pct == pytest.approx(30.0, abs=0.1)
 
 
-def test_compute_position_stats_no_side_uses_no_price_and_inverted_probability():
+def test_compute_position_metrics_no_side_uses_no_price_and_inverted_probability():
     market = _build_market(yes_price=0.30, no_price=0.70)
     trade = Trade(position="NO", entry_price=0.50, amount=10.0)  # bought NO when it was cheaper
     # AI thinks YES is unlikely (0.20) -> good news for the NO holder
     cached = _build_analysis_record(ai_estimated_probability=0.20)
 
-    stats = compute_position_stats(trade, market, history=[], cached=cached)
+    metrics = compute_position_metrics(trade, market, history=[], cached=cached)
 
     # NO side is up: entry 0.50 -> current no_price 0.70
-    assert stats.roi_pct == pytest.approx(40.0, abs=0.1)
+    assert metrics.roi_pct == pytest.approx(40.0, abs=0.1)
     # AI implies P(NO wins) = 1 - 0.20 = 0.80, vs current no_price 0.70 -> +14.3% edge
-    assert stats.expected_value_pct == pytest.approx(14.3, abs=0.1)
+    assert metrics.expected_value_pct == pytest.approx(14.3, abs=0.1)
+
+
+def test_compute_position_metrics_peak_ratchets_up_and_never_decreases(db_session):
+    market = make_market(db_session, yes_price=0.40)
+    trade = portfolio_service.buy(db_session, "BTC-70K", "YES", 20.0)  # entry 0.40, 50 contracts
+
+    market.yes_price = 0.82
+    db_session.commit()
+    metrics = compute_position_metrics(trade, market, history=[], cached=None, db=db_session)
+    assert metrics.peak_price == pytest.approx(0.82)
+    assert metrics.peak_profit_loss == pytest.approx(50 * 0.82 - 20.0)
+    assert trade.peak_price == pytest.approx(0.82)  # persisted
+
+    # Price retraces to 0.72 — peak must NOT decrease (the 40c -> 82c -> 72c case)
+    market.yes_price = 0.72
+    db_session.commit()
+    metrics = compute_position_metrics(trade, market, history=[], cached=None, db=db_session)
+    assert metrics.peak_price == pytest.approx(0.82)
+    assert metrics.peak_profit_loss == pytest.approx(50 * 0.82 - 20.0)
+    assert metrics.roi_pct == pytest.approx((0.72 - 0.40) / 0.40 * 100, abs=0.1)  # current ROI still reflects 0.72

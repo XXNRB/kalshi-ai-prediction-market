@@ -1,4 +1,4 @@
-import type { PositionStats } from "@/lib/types";
+import type { ExitDecision, PositionMetrics } from "@/lib/types";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -8,31 +8,63 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function PositionStatsRow({ stats }: { stats: PositionStats }) {
+const URGENCY_STYLES: Record<string, string> = {
+  LOW: "border-slate-700 bg-slate-500/10 text-slate-300",
+  MEDIUM: "border-amber-700 bg-amber-500/10 text-amber-400",
+  HIGH: "border-orange-700 bg-orange-500/10 text-orange-400",
+  CRITICAL: "border-rose-700 bg-rose-500/10 text-rose-400",
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  HOLD: "Hold",
+  SELL_PARTIAL: "Sell partial",
+  SELL_ALL: "Sell all",
+};
+
+function ActionBadge({ decision }: { decision: ExitDecision }) {
+  return (
+    <span
+      className={`rounded-full border px-2 py-0.5 ${URGENCY_STYLES[decision.urgency]}`}
+      title={decision.summary}
+    >
+      {ACTION_LABELS[decision.action]} · {decision.confidence}% confidence
+    </span>
+  );
+}
+
+export default function PositionStatsRow({
+  metrics,
+  decision,
+}: {
+  metrics: PositionMetrics;
+  decision: ExitDecision | null;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-300">
-      <Stat label="ROI" value={`${stats.roi_pct >= 0 ? "+" : ""}${stats.roi_pct.toFixed(1)}%`} />
+      <Stat label="ROI" value={`${metrics.roi_pct >= 0 ? "+" : ""}${metrics.roi_pct.toFixed(1)}%`} />
       <Stat
         label="Prob. change"
-        value={`${stats.probability_change_pts >= 0 ? "+" : ""}${stats.probability_change_pts.toFixed(1)}pt`}
+        value={`${metrics.probability_change_pts >= 0 ? "+" : ""}${metrics.probability_change_pts.toFixed(1)}pt`}
       />
       <Stat
         label="EV"
-        value={stats.expected_value_pct === null ? "not yet researched" : `${stats.expected_value_pct >= 0 ? "+" : ""}${stats.expected_value_pct.toFixed(1)}%`}
+        value={
+          metrics.expected_value_pct === null
+            ? "not yet researched"
+            : `${metrics.expected_value_pct >= 0 ? "+" : ""}${metrics.expected_value_pct.toFixed(1)}%`
+        }
       />
       <Stat
         label="Momentum"
-        value={`${stats.momentum_pts_per_step >= 0 ? "+" : ""}${stats.momentum_pts_per_step.toFixed(2)}pt/step`}
+        value={`${metrics.momentum_pts_per_step >= 0 ? "+" : ""}${metrics.momentum_pts_per_step.toFixed(2)}pt/step`}
       />
-      <Stat label="Risk" value={`${stats.risk_score.toFixed(0)}/25`} />
-      {stats.action === "consider_profit" && (
-        <span
-          className="rounded-full border border-amber-700 bg-amber-500/10 px-2 py-0.5 text-amber-400"
-          title={stats.reason}
-        >
-          Consider taking profit
-        </span>
-      )}
+      <Stat label="Risk" value={`${metrics.risk_score.toFixed(0)}/25`} />
+      <Stat label="Peak price" value={`${(metrics.peak_price * 100).toFixed(0)}¢`} />
+      <Stat
+        label="Peak P&L"
+        value={`${metrics.peak_profit_loss >= 0 ? "+" : ""}$${metrics.peak_profit_loss.toFixed(2)}`}
+      />
+      {decision && <ActionBadge decision={decision} />}
     </div>
   );
 }
