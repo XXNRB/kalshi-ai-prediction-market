@@ -34,9 +34,14 @@ def _flat_roi_strategy(
     the same rule the app shipped with before this engine existed, now
     wrapped in the structured decision shape. Deliberately simple so
     Auto-Execute has a well-understood default while richer strategies
-    (e.g. the upcoming MLB live-game-state one) are built on top of this
-    same interface. Never emits SELL_PARTIAL — partial-position execution
-    doesn't exist yet."""
+    are built on top of this same interface. Never emits SELL_PARTIAL —
+    partial-position execution doesn't exist yet.
+
+    Crossing the ROI threshold is deliberately NOT a sell recommendation
+    (action stays HOLD either side of it) — a price move alone is not
+    evidence that selling beats holding, so it's surfaced as an
+    informational milestone only (PROFIT_MILESTONE_REACHED), not
+    something Auto-Execute could ever act on."""
     roi = metrics.roi_pct
 
     if roi < FLAT_ROI_TAKE_PROFIT_THRESHOLD_PCT:
@@ -52,23 +57,14 @@ def _flat_roi_strategy(
             ),
         )
 
-    overshoot = roi - FLAT_ROI_TAKE_PROFIT_THRESHOLD_PCT
-    confidence = min(95, 60 + round(overshoot))
-    if overshoot >= 40:
-        urgency = ExitUrgency.HIGH
-    elif overshoot >= 15:
-        urgency = ExitUrgency.MEDIUM
-    else:
-        urgency = ExitUrgency.LOW
-
     return ExitDecision(
-        action=ExitAction.SELL_ALL,
-        confidence=confidence,
-        urgency=urgency,
-        reason_codes=["ROI_ABOVE_THRESHOLD"],
+        action=ExitAction.HOLD,
+        confidence=50,
+        urgency=ExitUrgency.LOW,
+        reason_codes=["PROFIT_MILESTONE_REACHED"],
         summary=(
-            f"Up {roi:.0f}% from entry — past the {FLAT_ROI_TAKE_PROFIT_THRESHOLD_PCT:.0f}% mark "
-            "where locking in the gain is worth considering."
+            f"Profit milestone reached — up {roi:.0f}% from entry. This alone doesn't "
+            "indicate whether selling is optimal."
         ),
     )
 

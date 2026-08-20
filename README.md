@@ -1,22 +1,51 @@
 # Kalshi AI Trading Research Assistant
 
 An AI-assisted research and paper-trading platform for Kalshi prediction
-markets. This is a **decision-support tool, not a trading bot** — no real or
-simulated money moves automatically, and every AI recommendation is shown
-with its reasoning, confidence, risks, and data sources.
+markets. This is a **decision-support tool, not a trading bot** — no real
+money moves automatically, every AI recommendation is shown with its
+reasoning, confidence, risks, and data sources, and the paper-trading exit
+engine's automated mode is off by default and treated as experimental (see
+below).
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the system design and roadmap.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for system design and
+[PROJECT_STATUS.md](./PROJECT_STATUS.md) for exactly what's built, what's in
+progress, and what's explicitly not validated yet — that file is the source
+of truth if anything here goes stale.
 
-## Phase 1 (current)
+## What's built
 
-- Ingest live Kalshi markets (public, unauthenticated market-data API).
-- Store markets + price history in SQLite.
-- Dashboard with sortable market table (volume, movers, expiration, probability change).
-- Market detail page with price-history chart.
-- On-demand AI research analysis per market (Agent 1: OpenAI-based Research Analyst).
+- **Market ingestion & dashboard** — live Kalshi markets polled every 60s,
+  stored in SQLite, sortable table (volume, movers, expiration, probability
+  change), price-history charts.
+- **AI research analysis (Agent 1)** — on-demand OpenAI-based analysis per
+  market: probability estimate, confidence, reasoning, risks, recommendation.
+- **Opportunity ranking** — a 0–100 score (liquidity, volatility,
+  time-to-expiration, AI conviction) shown as a star rating with a full
+  breakdown.
+- **Backtesting engine** — replays a market's real candle history and
+  compares a signal-based strategy against buy-and-hold.
+- **Paper trading engine** — a $1,000 simulated bankroll, conviction-weighted
+  allocation across a batch of candidate markets, and a math-only Position
+  Stats Panel (ROI, probability change, expected value, momentum, risk
+  score).
+- **Modular exit engine** — logs a structured `HOLD` / `SELL_PARTIAL` /
+  `SELL_ALL` recommendation for every open position on a background loop.
+  `RECOMMEND_ONLY` is the default and only mode this project currently
+  endorses; `AUTO_EXECUTE` exists and is safety-gated, but is experimental
+  and unvalidated — see [PROJECT_STATUS.md](./PROJECT_STATUS.md).
 
-Paper trading, opportunity scoring, and real trading are **not** built yet —
-see the roadmap in `ARCHITECTURE.md`.
+## In progress
+
+- **MLB live game-state** — MLB Gameday data as a display/storage layer
+  alongside Kalshi prices, so it can later be backtested. Not wired into any
+  buy/sell decision yet, by design.
+
+## Not built yet
+
+- A backtest comparing the exit engine's logged recommendations against
+  hold-to-resolution and other simple baselines (the actual test of whether
+  it's worth trusting).
+- Real-money trading of any kind.
 
 ## Prerequisites
 
@@ -36,7 +65,9 @@ uvicorn app.main:app --reload
 ```
 
 The API runs at `http://localhost:8000`. On startup it immediately polls
-Kalshi and then every `INGESTION_INTERVAL_SECONDS` (default 60s).
+Kalshi, then every `INGESTION_INTERVAL_SECONDS` (default 60s); the exit
+engine evaluates every open position every `EXIT_MONITOR_INTERVAL_SECONDS`
+(default 45s) in the background, independent of the frontend being open.
 
 Run tests:
 
@@ -57,12 +88,23 @@ The dashboard runs at `http://localhost:3000`.
 
 ## Environment variables
 
-See [.env.example](./.env.example) for the full list. Backend reads from
-`backend/.env`; frontend reads from `frontend/.env.local`.
+See [.env.example](./.env.example) for the base list. Backend reads from
+`backend/.env`; frontend reads from `frontend/.env.local`. Exit-engine and
+paper-trading tuning (bankroll size, auto-execute confidence/size/staleness
+limits, per-cycle sell cap) live in `backend/app/config.py` with sane
+defaults and can be overridden the same way.
 
 ## Project principles
 
 - Never assume an AI prediction is correct. Every recommendation must show
   its reasoning, confidence, risk, and data sources.
-- Build in phases — this is a research tool first, paper-trading second,
-  and real-money trading only later, behind explicit opt-in and risk limits.
+- Build in phases, and don't trust automation until it's validated. Research
+  tool → paper trading → exit-strategy validation → optional real-money
+  trading, each phase gated behind the previous one's data proving out.
+  `AUTO_EXECUTE` exists today but is off by default and stays that way until
+  its logged, hypothetical decisions are shown to beat hold-to-resolution
+  and other simple baselines.
+- New external data sources (e.g. MLB game state) are isolated behind a
+  provider interface and start as display/storage only — they don't get to
+  influence a trading decision until there's enough history to backtest
+  whether they actually help.
