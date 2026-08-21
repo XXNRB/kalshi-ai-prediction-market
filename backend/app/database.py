@@ -28,6 +28,8 @@ def init_db() -> None:
         exit_strategy,
         market,
         market_analysis,
+        mlb_game_link,
+        mlb_game_state_snapshot,
         price_history,
         trade,
     )

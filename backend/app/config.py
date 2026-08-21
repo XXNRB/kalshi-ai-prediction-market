@@ -20,5 +20,15 @@ class Settings(BaseSettings):
     exit_max_data_staleness_seconds: int = 120
     exit_auto_max_sells_per_cycle: int = 3
 
+    # MLB live game-state — display/storage only, see PROJECT_STATUS.md.
+    # None of these feed the exit engine or any trade decision.
+    mlb_stats_api_base: str = "https://statsapi.mlb.com/api"
+    mlb_poll_interval_live_seconds: int = 30
+    mlb_poll_interval_pregame_seconds: int = 300
+    mlb_poll_interval_delayed_seconds: int = 120
+    mlb_stale_game_data_seconds: int = 90
+    mlb_provider_request_timeout_seconds: float = 5.0
+    mlb_provider_max_consecutive_errors: int = 5
+
 
 settings = Settings()

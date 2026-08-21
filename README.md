@@ -33,18 +33,21 @@ of truth if anything here goes stale.
   `RECOMMEND_ONLY` is the default and only mode this project currently
   endorses; `AUTO_EXECUTE` exists and is safety-gated, but is experimental
   and unvalidated — see [PROJECT_STATUS.md](./PROJECT_STATUS.md).
-
-## In progress
-
-- **MLB live game-state** — MLB Gameday data as a display/storage layer
-  alongside Kalshi prices, so it can later be backtested. Not wired into any
-  buy/sell decision yet, by design.
+- **MLB live game-state** — MLB Gameday data (via `statsapi.mlb.com`,
+  isolated behind a swappable provider interface) resolved, polled, and
+  stored alongside Kalshi prices, and shown as an informational line next
+  to the position. Not wired into any buy/sell decision — the exit engine's
+  logic doesn't change for MLB markets, by design, until there's enough
+  paper-trading history to backtest whether game state actually helps.
 
 ## Not built yet
 
-- A backtest comparing the exit engine's logged recommendations against
-  hold-to-resolution and other simple baselines (the actual test of whether
-  it's worth trusting).
+- Data collection + backtesting infrastructure (Phase 4, planned next): a
+  systematic labeled dataset across markets, and the backtest comparing the
+  exit engine's logged recommendations against hold-to-resolution and other
+  simple baselines — the actual test of whether it's worth trusting.
+- Any ML/AI trading subsystem (BTC included) — deliberately comes after
+  Phase 4's dataset exists, not before.
 - Real-money trading of any kind.
 
 ## Prerequisites

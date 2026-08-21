@@ -8,6 +8,8 @@ from app.models import (  # noqa: F401
     exit_strategy,
     market,
     market_analysis,
+    mlb_game_link,
+    mlb_game_state_snapshot,
     price_history,
     trade,
 )

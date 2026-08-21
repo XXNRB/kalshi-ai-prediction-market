@@ -1,0 +1,266 @@
+[
+  {
+    "gamePk": 824804,
+    "gameDate": "2026-08-06T16:35:00Z",
+    "doubleHeader": "N",
+    "gameNumber": 1,
+    "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 108,
+          "name": "Los Angeles Angels"
+        }
+      },
+      "home": {
+        "team": {
+          "id": 110,
+          "name": "Baltimore Orioles"
+        }
+      }
+    }
+  },
+  {
+    "gamePk": 824481,
+    "gameDate": "2026-08-06T16:40:00Z",
+    "doubleHeader": "N",
+    "gameNumber": 1,
+    "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 133,
+          "name": "Athletics"
+        }
+      },
+      "home": {
+        "team": {
+          "id": 113,
+          "name": "Cincinnati Reds"
+        }
+      }
+    }
+  },
+  {
+    "gamePk": 824401,
+    "gameDate": "2026-08-06T17:10:00Z",
+    "doubleHeader": "N",
+    "gameNumber": 1,
+    "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 121,
+          "name": "New York Mets"
+        }
+      },
+      "home": {
+        "team": {
+          "id": 114,
+          "name": "Cleveland Guardians"
+        }
+      }
+    }
+  },
+  {
+    "gamePk": 823754,
+    "gameDate": "2026-08-06T18:10:00Z",
+    "doubleHeader": "N",
+    "gameNumber": 1,
+    "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 134,
+          "name": "Pittsburgh Pirates"
+        }
+      },
+      "home": {
+        "team": {
+          "id": 158,
+          "name": "Milwaukee Brewers"
+        }
+      }
+    }
+  },
+  {
+    "gamePk": 824664,
+    "gameDate": "2026-08-06T18:20:00Z",
+    "doubleHeader": "N",
+    "gameNumber": 1,
+    "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 141,
+          "name": "Toronto Blue Jays"
+        }
+      },
+      "home": {
+        "team": {
+          "id": 112,
+          "name": "Chicago Cubs"
+        }
+      }
+    }
+  },
+  {
+    "gamePk": 823105,
+    "gameDate": "2026-08-06T20:10:00Z",
+    "doubleHeader": "N",
+    "gameNumber": 1,
+    "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 116,
+          "name": "Detroit Tigers"
+        }
+      },
+      "home": {
+        "team": {
+          "id": 136,
+          "name": "Seattle Mariners"
+        }
+      }
+    }
+  },
+  {
+    "gamePk": 823430,
+    "gameDate": "2026-08-06T22:05:00Z",
+    "doubleHeader": "N",
+    "gameNumber": 1,
+    "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 120,
+          "name": "Washington Nationals"
+        }
+      },
+      "home": {
+        "team": {
+          "id": 143,
+          "name": "Philadelphia Phillies"
+        }
+      }
+    }
+  },
+  {
+    "gamePk": 824729,
+    "gameDate": "2026-08-06T23:10:00Z",
+    "doubleHeader": "N",
+    "gameNumber": 1,
+    "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 145,
+          "name": "Chicago White Sox"
+        }
+      },
+      "home": {
+        "team": {
+          "id": 111,
+          "name": "Boston Red Sox"
+        }
+      }
+    }
+  },
+  {
+    "gamePk": 824885,
+    "gameDate": "2026-08-06T23:15:00Z",
+    "doubleHeader": "N",
+    "gameNumber": 1,
+    "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 146,
+          "name": "Miami Marlins"
+        }
+      },
+      "home": {
+        "team": {
+          "id": 144,
+          "name": "Atlanta Braves"
+        }
+      }
+    }
+  },
+  {
+    "gamePk": 824080,
+    "gameDate": "2026-08-06T23:40:00Z",
+    "doubleHeader": "N",
+    "gameNumber": 1,
+    "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 142,
+          "name": "Minnesota Twins"
+        }
+      },
+      "home": {
+        "team": {
+          "id": 118,
+          "name": "Kansas City Royals"
+        }
+      }
+    }
+  },
+  {
+    "gamePk": 825053,
+    "gameDate": "2026-08-07T01:40:00Z",
+    "doubleHeader": "N",
+    "gameNumber": 1,
+    "status": {
+      "abstractGameState": "Final",
+      "detailedState": "Final"
+    },
+    "teams": {
+      "away": {
+        "team": {
+          "id": 135,
+          "name": "San Diego Padres"
+        }
+      },
+      "home": {
+        "team": {
+          "id": 109,
+          "name": "Arizona Diamondbacks"
+        }
+      }
+    }
+  }
+]

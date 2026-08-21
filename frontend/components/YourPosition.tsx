@@ -60,7 +60,7 @@ export default function YourPosition({
                   </button>
                 </div>
               </div>
-              {metrics && <PositionStatsRow metrics={metrics} decision={t.exit_decision} />}
+              {metrics && <PositionStatsRow metrics={metrics} decision={t.exit_decision} game={t.mlb_game_state} />}
             </div>
           );
         })}

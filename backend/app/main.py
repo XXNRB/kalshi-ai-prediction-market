@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import allocation, analysis, backtest, exit_strategy, markets, portfolio
 from app.config import settings
-from app.core.scheduler import run_exit_monitor_loop, run_ingestion_loop
+from app.core.scheduler import run_exit_monitor_loop, run_ingestion_loop, run_mlb_polling_loop
 from app.database import init_db
 
 stop_event = asyncio.Event()
@@ -17,12 +17,14 @@ async def lifespan(app: FastAPI):
     init_db()
     ingestion_task = asyncio.create_task(run_ingestion_loop(stop_event))
     exit_monitor_task = asyncio.create_task(run_exit_monitor_loop(stop_event))
+    mlb_polling_task = asyncio.create_task(run_mlb_polling_loop(stop_event))
     try:
         yield
     finally:
         stop_event.set()
         await ingestion_task
         await exit_monitor_task
+        await mlb_polling_task
 
 
 app = FastAPI(title="Kalshi AI Trading Research Assistant", lifespan=lifespan)

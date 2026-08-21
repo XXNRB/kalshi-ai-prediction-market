@@ -4,6 +4,7 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
 from app.schemas.exit_strategy import ExitDecision
+from app.schemas.mlb import GameState
 
 Side = Literal["YES", "NO"]
 
@@ -50,6 +51,9 @@ class TradeOut(BaseModel):
     exit_timestamp: Optional[datetime]
     metrics: Optional[PositionMetrics] = None
     exit_decision: Optional[ExitDecision] = None
+    # Informational only — display/storage, per PROJECT_STATUS.md. Never an
+    # input to exit_decision above.
+    mlb_game_state: Optional[GameState] = None
 
 
 class PortfolioSummary(BaseModel):

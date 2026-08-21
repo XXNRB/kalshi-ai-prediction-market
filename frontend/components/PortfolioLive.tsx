@@ -138,7 +138,7 @@ export default function PortfolioLive({ initialSummary }: { initialSummary: Port
                     {t.metrics && (
                       <tr className="bg-slate-950/40">
                         <td colSpan={7} className="px-4 pb-3">
-                          <PositionStatsRow metrics={t.metrics} decision={t.exit_decision} />
+                          <PositionStatsRow metrics={t.metrics} decision={t.exit_decision} game={t.mlb_game_state} />
                         </td>
                       </tr>
                     )}

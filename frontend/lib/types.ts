@@ -115,6 +115,34 @@ export interface ExitDecisionLogEntry {
   execution_price: number | null;
 }
 
+export type GameStatus = "scheduled" | "live" | "delayed" | "suspended" | "final";
+
+/** Display/storage only — never an input to exit_decision. See
+ * PROJECT_STATUS.md: no buy/sell decision may depend on this data yet. */
+export interface GameState {
+  game_id: number;
+  home_team: string;
+  away_team: string;
+  home_score: number;
+  away_score: number;
+  inning: number | null;
+  inning_half: string | null;
+  outs: number | null;
+  runner_on_first: boolean;
+  runner_on_second: boolean;
+  runner_on_third: boolean;
+  batting_team: string | null;
+  fielding_team: string | null;
+  current_batter: string | null;
+  current_pitcher: string | null;
+  last_play_description: string | null;
+  status: GameStatus;
+  source_timestamp: string | null;
+  fetched_at: string;
+  data_age_seconds: number | null;
+  source_provider: string;
+}
+
 export interface Trade {
   id: number;
   ticker: string;
@@ -131,6 +159,7 @@ export interface Trade {
   exit_timestamp: string | null;
   metrics: PositionMetrics | null;
   exit_decision: ExitDecision | null;
+  mlb_game_state: GameState | null;
 }
 
 export interface PortfolioSummary {

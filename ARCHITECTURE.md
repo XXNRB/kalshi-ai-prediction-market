@@ -8,10 +8,13 @@ piece currently stands.
 ## Scope so far
 
 Kalshi market ingestion, AI research analysis, opportunity ranking,
-backtesting, and a paper-trading engine (bankroll + conviction-weighted
-allocation + a modular exit engine) are all built. An MLB live game-state
-data layer is in progress, deliberately isolated from any decision it could
-otherwise influence. Real-money trading has not been started.
+backtesting, a paper-trading engine (bankroll + conviction-weighted
+allocation + a modular exit engine), and an MLB live game-state data layer
+are all built. The MLB layer is deliberately isolated from any decision it
+could otherwise influence — see the dashed lines in the flow below. Data
+collection + backtesting infrastructure (Phase 4) is planned next; an
+ML/AI trading subsystem of any kind is deliberately not next. Real-money
+trading has not been started.
 
 ## High-level flow
 
@@ -116,22 +119,50 @@ any trade decision. That's a hard boundary, not a temporary gap — see
   baselines) will run against before `AUTO_EXECUTE` is trusted as anything
   more than an experiment. See `PROJECT_STATUS.md`.
 
-### MLB live game-state (in progress)
+### MLB live game-state (`backend/app/services/mlb/`)
 - **Design constraint:** a pure data provider. It resolves a game, polls its
-  state, displays it next to the Kalshi position, and stores it — nothing
-  about it may feed a buy/sell decision until there's enough paper-trading
-  history to backtest whether it helps.
-- **Source:** `statsapi.mlb.com` — confirmed live (not scraping) as the same
-  backend Gameday's own frontend calls; undocumented for third-party use,
-  so it sits behind a swappable `MLBProvider` interface rather than being
-  called directly from anywhere else in the app.
-- **Planned pieces** (not yet built — tracked in `PROJECT_STATUS.md`):
-  `MLBProvider` + mapper, a team/game matcher that resolves a `Market` to an
-  MLB game once and reuses the result, an adaptive/deduped polling loop
-  decoupled from the exit-monitor loop so a slow MLB API can never stall
-  trade evaluation, an `MLBGameStateSnapshot` table for future backtesting,
-  and an informational "Game" line in the frontend — explicitly not part of
-  the exit engine's action badge.
+  state, displays it next to the Kalshi position, and stores it. Nothing
+  about it feeds a buy/sell decision — `evaluate_exit()` has no dispatch
+  branch for MLB and never receives the provider, cache, or any MLB model,
+  so there's nothing there to wire in by accident.
+- **Provider** (`provider.py`): `statsapi.mlb.com` — confirmed live (not
+  scraping) as the same backend Gameday's own frontend calls; undocumented
+  for third-party use, so it sits behind an `MLBProvider` Protocol rather
+  than being called directly from anywhere else in the app.
+- **Mapper** (`mapper.py`): pure function, raw live-feed JSON → `GameState`
+  (`schemas/mlb.py`) — score, inning/half, outs, baserunners (statsapi marks
+  an occupied base by the *presence* of a key, not a boolean), batter,
+  the pitcher actually on the mound, last completed play, status.
+- **Matcher** (`matcher.py`): resolves a `Market` to an MLB `gamePk` once,
+  off the ticker's own concatenated team codes (e.g.
+  `KXMLBGAME-26AUG061610DETSEA-DET`) — split against a verified static table
+  of official MLB team codes and disambiguated by the ticker's pick segment,
+  not by fuzzy title parsing. Persists to `MLBGameLink` and reuses it
+  forever after; doubleheaders tie-break on closest game time to
+  `Market.kalshi_open_time`; unresolved markets retry at most once/hour.
+- **Cache** (`cache.py`): in-memory, per-process, keyed by `mlb_game_id`,
+  replaced wholesale on update — safe without a lock because the
+  background loops are cooperative `asyncio` tasks on one event loop, not
+  real threads. Also tracks last-polled time and consecutive failures per
+  game for the adaptive interval and graceful degradation below.
+- **Polling loop** (`poller.py::run_mlb_poll_cycle` + `core/scheduler.py`):
+  a third background task. Only polls games linked to markets with an
+  **open position**, at most once per distinct game per cycle even when
+  multiple markets reference it, on an adaptive interval by status (live
+  ~30s, pregame ~5min, delayed/suspended ~2min, final → stops entirely). The
+  only place in the app that makes an MLB network call; a slow or failing
+  MLB API degrades gracefully (last-known state stays cached) and can never
+  stall Kalshi ingestion or the exit-monitor loop.
+- **Storage** (`MLBGameStateSnapshot`): one row per successful poll — the
+  full game state plus the linked market's Kalshi prices at that same
+  moment, structured columns rather than a JSON blob, built for exactly the
+  kind of query Phase 4's backtesting needs.
+- **Display**: an informational "Game" line in `PositionStatsRow.tsx`,
+  composed at the route layer (`_attach_mlb_game_state` in
+  `routes/portfolio.py`, reading only whatever the polling loop already
+  cached) — explicitly separate from the exit engine's action badge, and
+  omitted entirely rather than shown as a placeholder when no state is
+  available yet.
 
 ### API (`backend/app/api/routes/`)
 - `GET /api/markets`, `GET /api/markets/{ticker}`,
@@ -156,12 +187,17 @@ panel, the backtest panel, and the trade/position panels; `/portfolio`
 
 ## Roadmap
 
-- **Now (Phase 3):** finish the MLB data layer above — display and storage
-  only, still no coupling to any decision.
-- **Next:** the `RECOMMEND_ONLY`-log vs. hold-to-resolution/baseline
-  comparison that actually tests whether the exit engine adds value, before
+- **Now (Phase 4, planned):** data collection + backtesting infrastructure —
+  systematic labeled price/feature history across markets (not just MLB),
+  and the `RECOMMEND_ONLY`-log vs. hold-to-resolution/baseline comparison
+  that actually tests whether the exit engine adds value, before
   `AUTO_EXECUTE` becomes anything more than an off-by-default experiment.
-- **Then:** a BTC ML subsystem — planned, not yet scoped.
+  Worth studying (not copying) as architecture references: a separate
+  Kalshi research project doing short-horizon mixture-of-experts price
+  prediction, and other open-source Kalshi systems' WebSocket feeds, market
+  scanning, and risk-control patterns.
+- **Then:** an ML/AI trading subsystem (BTC or otherwise) — deliberately
+  comes after Phase 4's dataset exists, not before, and not yet scoped.
 - **Later, gated:** optional real-money trading via Kalshi's authenticated
   (RSA-PSS signed) trading API, behind explicit user approval, risk limits,
   max position size, and an emergency stop — not started, and not a
